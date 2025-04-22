@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Counter App - Mobile Optimized</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: Arial, sans-serif;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      background-color: #f5f5f5;
+      touch-action: manipulation;
+    }
+
+    .screen {
+      display: none;
+      height: 100%;
+      width: 100%;
+      position: fixed;
+      top: 0;
+      left: 0;
+    }
+
+    .active {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Screen 1: Target Setup */
+    #screen1 {
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 20px;
+    }
+
+    #screen1 h1 {
+      font-size: 2.5rem;
+      margin-bottom: 30px;
+      color: #333;
+    }
+
+    #target {
+      font-size: 2rem;
+      width: 80%;
+      max-width: 300px;
+      padding: 15px;
+      margin: 20px 0;
+      text-align: center;
+      border: 3px solid #4a90e2;
+      border-radius: 10px;
+    }
+
+    #startButton {
+      font-size: 1.8rem;
+      padding: 15px 30px;
+      background-color: #4a90e2;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      margin-top: 20px;
+      width: 80%;
+      max-width: 300px;
+      opacity: 0.6;
+    }
+
+    #startButton:not([disabled]) {
+      opacity: 1;
+      cursor: pointer;
+    }
+
+    /* Screen 2: Counter */
+    .counter-display {
+      height: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      background: white;
+    }
+
+    #counter {
+      font-size: 5rem;
+      width: 200px;
+      text-align: center;
+      border: 2px solid #4a90e2;
+      background: white;
+      font-weight: bold;
+      border-radius: 10px;
+      padding: 5px;
+    }
+
+    #resetBtn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      font-size: 1rem;
+      background: none;
+      border: none;
+      color: #ff4444;
+      padding: 10px;
+    }
+
+    .button-area {
+      height: 50%;
+      display: flex;
+    }
+
+    .decrement-area, .increment-area {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .decrement-area {
+      background: #ff6b6b;
+    }
+
+    .increment-area {
+      background: #4CAF50;
+    }
+
+    .big-button {
+      width: 100%;
+      height: 100%;
+      font-size: 4rem;
+      color: white;
+      background: transparent;
+      border: none;
+    }
+
+    /* Screen 3: Completion */
+    #screen3 {
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      background-color: #c8f7c5;
+      padding: 20px;
+      animation: fadeIn 0.5s;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    #completionMessage {
+      font-size: 2rem;
+      margin-bottom: 40px;
+      padding: 0 20px;
+    }
+
+    #restartButton {
+      font-size: 1.8rem;
+      padding: 15px 30px;
+      background-color: #4a90e2;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      width: 80%;
+      max-width: 300px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Screen 1: Set Target -->
+  <div id="screen1" class="screen active">
+    <h1>Set Target Count</h1>
+    <input id="target" type="number" value="0" min="0" oninput="validateTarget()" onkeypress="handleKeyPress(event)" />
+    <button id="startButton" onclick="startCounter()" disabled>START</button>
+  </div>
+
+  <!-- Screen 2: Counter Interface -->
+  <div id="screen2" class="screen">
+    <div class="counter-display">
+      <input id="counter" type="number" value="0" min="0" onchange="validateCounter()" />
+      <button id="resetBtn" onclick="reset()">reset</button>
+    </div>
+    <div class="button-area">
+      <div class="decrement-area">
+        <button class="big-button" onclick="decrement()">-</button>
+      </div>
+      <div class="increment-area">
+        <button class="big-button" onclick="increment()">+</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 3: Completion -->
+  <div id="screen3" class="screen">
+    <p id="completionMessage"></p>
+    <button id="restartButton" onclick="restart()">START NEW COUNT</button>
+  </div>
+
+  <audio id="incrementSound" src="https://www.soundjay.com/button/beep-07.wav"></audio>
+  <audio id="completeSound" src="https://www.soundjay.com/button/beep-10.wav"></audio>
+
+  <script>
+    let target = 0;
+    let startTime = null;
+
+    const counterInput = document.getElementById("counter");
+    const targetInput = document.getElementById("target");
+    const incrementSound = document.getElementById("incrementSound");
+    const completeSound = document.getElementById("completeSound");
+
+    // Vibrate function with fallback
+    function vibrate(duration) {
+      if (navigator.vibrate) {
+        navigator.vibrate(duration);
+      }
+    }
+
+    function showScreen(id) {
+      document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+      document.getElementById(id).classList.add("active");
+      
+      // Vibrate when completion screen loads
+      if (id === "screen3") {
+        vibrate(200); // Longer vibration for completion
+      }
+    }
+
+    function validateCounter() {
+      let value = parseInt(counterInput.value) || 0;
+      value = Math.max(0, value);
+      counterInput.value = value;
+      checkCompletion(value);
+    }
+
+    function updateCounter(value) {
+      value = Math.max(0, value);
+      counterInput.value = value;
+      checkCompletion(value);
+    }
+
+    function getCounterValue() {
+      return parseInt(counterInput.value) || 0;
+    }
+
+    function increment() {
+      vibrate(50); // Short vibration on increment
+      let count = getCounterValue();
+      incrementSound.play();
+      updateCounter(count + 1);
+    }
+
+    function decrement() {
+      vibrate(50); // Short vibration on decrement
+      let count = getCounterValue();
+      updateCounter(count - 1);
+    }
+
+    function reset() {
+      vibrate(30); // Very short vibration on reset
+      updateCounter(0);
+    }
+
+    function startCounter() {
+      vibrate(30);
+      target = parseInt(targetInput.value) || 1;
+      startTime = new Date();
+      updateCounter(0);
+      showScreen("screen2");
+    }
+
+    function checkCompletion(currentCount) {
+      if (target > 0 && currentCount >= target) {
+        const endTime = new Date();
+        const elapsed = ((endTime - startTime) / 1000).toFixed(2);
+        document.getElementById("completionMessage").textContent =
+          `You reached ${target} in ${elapsed} seconds!`;
+        completeSound.play();
+        showScreen("screen3");
+      }
+    }
+
+    function restart() {
+      vibrate(30);
+      showScreen("screen1");
+    }
+
+    function validateTarget() {
+      const value = parseInt(targetInput.value) || 0;
+      const startButton = document.getElementById("startButton");
+      startButton.disabled = value <= 0;
+    }
+
+    function handleKeyPress(event) {
+      if (event.key === "Enter") {
+        const value = parseInt(targetInput.value) || 0;
+        if (value > 0) {
+          startCounter();
+        }
+      }
+    }
+
+    window.onload = function() {
+      validateTarget();
+      
+      // Make buttons more responsive to touch
+      document.querySelectorAll('button').forEach(button => {
+        button.addEventListener('touchstart', function() {
+          this.style.opacity = '0.7';
+          vibrate(10); // Tiny vibration on touch start
+        });
+        button.addEventListener('touchend', function() {
+          this.style.opacity = '1';
+        });
+      });
+    };
+  </script>
+</body>
+</html>
