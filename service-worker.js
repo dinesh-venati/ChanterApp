@@ -2,8 +2,8 @@ const CACHE_NAME = "chanter-app-cache-v1";
 const urlsToCache = [
   "./ChanterApp.html",
   "./manifest.json",
-  "./icons/icon-192.png",
-  "./icons/icon-512.png",
+  "./icon-192.png",
+  "./icon-512.png",
   "https://www.soundjay.com/button/beep-07.wav",
   "https://www.soundjay.com/button/beep-10.wav"
 ];
