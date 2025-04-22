@@ -1,6 +1,6 @@
 const CACHE_NAME = "chanter-app-cache-v1";
 const urlsToCache = [
-  "./ChanterApp.html",
+  "./index.html",
   "./manifest.json",
   "./icon-192.png",
   "./icon-512.png",
